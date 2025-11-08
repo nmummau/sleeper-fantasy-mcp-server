@@ -1,189 +1,145 @@
-# Sleeper Fantasy MCP Server
+# Sleeper Fantasy Football MCP Server
 
-Model Context Protocol (MCP) server that exposes the Sleeper Fantasy Football API so agentic tools (Codex, Claude Desktop, etc.) can inspect leagues, rosters, drafts, matchups, transactions, and players without dealing with raw HTTP calls.
+A Model Context Protocol (MCP) server that provides comprehensive access to the Sleeper Fantasy Football API for leagues, rosters, matchups, drafts, players, and more.
 
----
+## Purpose
 
-## Table of Contents
-
-1. [Features](#features)
-2. [Architecture](#architecture)
-3. [Requirements](#requirements)
-4. [Quick Start (Python)](#quick-start-python)
-5. [Quick Start (Docker)](#quick-start-docker)
-6. [Configuration](#configuration)
-7. [Manual Testing](#manual-testing)
-8. [Using the Server from Codex](#using-the-server-from-codex)
-9. [Development Tips](#development-tips)
-10. [Troubleshooting](#troubleshooting)
-11. [License](#license)
-
----
+This MCP server provides a secure interface for AI assistants to access Sleeper Fantasy Football data including league information, rosters, matchups, playoff brackets, transactions, draft data, and player statistics.
 
 ## Features
 
-### League & User Data
-- `get_user`, `get_user_leagues`, `get_league`, `get_league_users`
-- Coverage for season metadata, commissioners, draft IDs, playoff settings, etc.
+### Current Implementation
 
-### Rosters, Scores & Playoffs
-- `get_league_rosters`, `get_league_matchups`, `get_winners_bracket`, `get_losers_bracket`
-- Shows points for/against, weekly matchups, playoff brackets, and lineup snapshots.
+- **`get_user`** - Get user information by username or user ID
+- **`get_user_leagues`** - Get all leagues for a user in a specific sport and season
+- **`get_league`** - Get detailed information about a specific league
+- **`get_league_rosters`** - Get all rosters in a league with standings and player information
+- **`get_league_users`** - Get all users in a league with their team information
+- **`get_league_matchups`** - Get all matchups for a specific week in a league
+- **`get_winners_bracket`** - Get the winners playoff bracket for a league
+- **`get_losers_bracket`** - Get the losers playoff bracket for a league
+- **`get_league_transactions`** - Get all transactions for a specific week including trades, waivers, and free agent pickups
+- **`get_traded_picks`** - Get all traded draft picks in a league including future picks
+- **`get_nfl_state`** - Get current NFL season state including week, season type, and season dates
+- **`get_user_drafts`** - Get all drafts for a user in a specific sport and season
+- **`get_league_drafts`** - Get all drafts for a league
+- **`get_draft`** - Get detailed information about a specific draft
+- **`get_draft_picks`** - Get all picks made in a draft
+- **`get_draft_traded_picks`** - Get all traded picks in a draft
+- **`get_trending_players`** - Get trending players based on add or drop activity
+- **`search_player_info`** - Search for detailed information about a specific player by their player ID
 
-### Drafts & Transactions
-- `get_league_drafts`, `get_draft`, `get_draft_picks`, `get_draft_traded_picks`
-- `get_league_transactions`, `get_traded_picks`
+## Prerequisites
 
-### Player Discovery
-- `get_trending_players`, `search_player_info`
-- `get_nfl_state` for week/season tracking.
+- Docker Desktop with MCP Toolkit enabled
+- Docker MCP CLI plugin (`docker mcp` command)
+- No API authentication required (Sleeper API is read-only and public)
 
-Every tool follows the MCP guidelines enforced in `sleeper_server.py`: empty-string defaults, single-line docstrings, friendly status emojis, and stderr logging.
+## Installation
 
----
-
-## Architecture
-
-```
-Codex / Claude Desktop
-        │ (MCP stdio)
-        ▼
-Sleeper Fantasy MCP Server (this repo)
-        │ (HTTPS)
-        ▼
-Sleeper API (https://api.sleeper.app/v1)
-```
-
-- Stateless server: no database or secrets required.
-- `httpx` powers async calls with 10‑second timeouts.
-- Optional `SLEEPER_LEAGUE_ID` env var saves re-typing league IDs.
-
----
-
-## Requirements
-
-- Python 3.11+
-- `pip` (or `uv`/`poetry`) for dependencies in `requirements.txt`
-- Optional: Docker Desktop (for the container workflow)
-- Optional: Codex CLI ≥ the version that ships `codex mcp` (already available in this environment)
-
----
-
-## Quick Start (Python)
-
-```bash
-git clone git@github.com:nmummau/sleeper-fantasy-mcp-server.git
-cd sleeper-fantasy-mcp-server
-python -m venv .venv
-source .venv/bin/activate            # Windows PowerShell: .\.venv\Scripts\Activate.ps1
-pip install --upgrade pip
-pip install -r requirements.txt
-export SLEEPER_LEAGUE_ID="1257057278398300160"  # optional, but convenient
-python sleeper_server.py
-```
-
-The process listens on stdio (no HTTP port). Leave it running when connecting from Codex/Claude.
-
----
-
-## Quick Start (Docker)
-
-```bash
-docker build -t sleeper-fantasy-mcp .
-docker run --rm \
-  -e SLEEPER_LEAGUE_ID=1257057278398300160 \
-  sleeper-fantasy-mcp
-```
-
-Use `docker logs` to monitor output. Because the container also communicates over stdio, it is typically launched by whatever host orchestrates MCP servers (Codex, Claude Desktop, etc.).
-
----
+See the step-by-step instructions provided with the files.
 
 ## Configuration
 
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `SLEEPER_LEAGUE_ID` | Default league used when MCP tool calls omit `league_id`. | `SLEEPER_LEAGUE_ID=1257057278398300160` |
+You can optionally set a default league ID as an environment variable:
+- `SLEEPER_LEAGUE_ID` - Your default league ID (e.g., "1257057278398300160")
 
-No API keys are necessary; Sleeper’s API is read-only.
+If set, tools will use this as the default league ID when none is provided.
 
----
+## Usage Examples
 
-## Manual Testing
+In Claude Desktop, you can ask:
 
-### List available tools
+### League Information
+- "Show me the details of my Sleeper league 1257057278398300160"
+- "What are the current standings in my league?"
+- "Who are all the users in my fantasy league?"
 
-```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python sleeper_server.py
+### Matchups & Scores
+- "Show me the matchups for week 5 in my league"
+- "What's the score of this week's games?"
+
+### Rosters & Players
+- "Show me all the rosters in my league"
+- "Get trending players being added in the last 24 hours"
+- "Search for player information for player ID 4866"
+
+### Playoffs
+- "Show me the playoff bracket"
+- "What's the losers bracket look like?"
+
+### Transactions
+- "Show me all the trades and waiver pickups from week 3"
+- "What draft picks have been traded in my league?"
+
+### Drafts
+- "Show me the draft results for my league"
+- "Get all the picks from draft ID 12345678"
+
+### NFL Info
+- "What week of the NFL season are we in?"
+- "Get the current NFL state"
+
+## Architecture
+```
+Claude Desktop → MCP Gateway → Sleeper MCP Server → Sleeper API
+                                                      (api.sleeper.app)
 ```
 
-### Call a tool directly
+## Development
 
+### Local Testing
 ```bash
-echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_nfl_state","arguments":{}}}' \
-  | python sleeper_server.py
+# Set environment variables for testing (optional)
+export SLEEPER_LEAGUE_ID="1257057278398300160"
+
+# Run directly
+python sleeper_server.py
+
+# Test MCP protocol
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | python sleeper_server.py
 ```
 
-Tip: set `SLEEPER_LEAGUE_ID` beforehand so league-based tools work without extra arguments.
+### Adding New Tools
 
----
+1. Add the function to `sleeper_server.py`
+2. Decorate with `@mcp.tool()`
+3. Update the catalog entry with the new tool name
+4. Rebuild the Docker image
 
-## Using the Server from Codex
+## API Rate Limits
 
-1. **Install dependencies (or use the Docker image)** following the quick start directions.
-2. **Add the MCP entry:**
-
-   ```bash
-   codex mcp add sleeper-fantasy \
-     --env SLEEPER_LEAGUE_ID=1257057278398300160 \
-     -- python /mnt/c/code/sleeper-fantasy-mcp-server/.venv/bin/python \
-     /mnt/c/code/sleeper-fantasy-mcp-server/sleeper_server.py
-   ```
-
-   Adjust the path to match your checkout or replace with the Docker command.
-
-3. **Verify registration:**
-
-   ```bash
-   codex mcp list
-   ```
-
-   You should see `sleeper-fantasy` with the command that launches the server.
-
-4. **Start a Codex session that loads the server:**
-
-   ```bash
-   codex -c 'mcp_servers=["sleeper-fantasy"]' \
-     --sandbox workspace-write \
-     "Use the Sleeper tools to summarize my fantasy league."
-   ```
-
-   Any Codex prompt started with that config will surface the Sleeper tools under the MCP tools list.
-
-5. **Optional:** persist the setting by writing `mcp_servers = ["sleeper-fantasy"]` to `~/.codex/config.toml`.
-
-To remove the integration later, run `codex mcp remove sleeper-fantasy`.
-
----
-
-## Development Tips
-
-1. **Add tools** by creating async functions in `sleeper_server.py`, decorating with `@mcp.tool()`, and returning plain strings.
-2. **Follow MCP style rules** already exemplified (single-line docstrings, default empty strings, friendly errors).
-3. **Test locally** with the JSON-RPC snippets above before reconnecting Codex/Claude.
-4. **Ship via Docker** when sharing with others so dependency resolution is identical.
-
----
+The Sleeper API has a general rate limit of 1000 API calls per minute. This server does not implement rate limiting, so be mindful of your usage to avoid being IP-blocked.
 
 ## Troubleshooting
 
-- **Tools do not appear in Codex:** ensure the MCP server is running, `codex mcp list` shows the entry, and the session was launched with `mcp_servers=["sleeper-fantasy"]`.
-- **API errors:** confirm the IDs you pass exist; many Sleeper endpoints return `[]` for invalid IDs without throwing 404s.
-- **Rate limits:** Sleeper allows ~1000 requests/minute per IP. Heavy automation should throttle itself.
-- **Network hiccups:** every request has a 10-second timeout; rerun the request if you hit a transient failure.
+### Tools Not Appearing
+- Verify Docker image built successfully: `docker images | grep sleeper`
+- Check catalog and registry files are properly formatted
+- Ensure Claude Desktop config includes custom catalog
+- Restart Claude Desktop completely
 
----
+### API Errors
+- Verify league IDs are correct
+- Check that the resource exists (some endpoints return empty arrays for missing data)
+- Ensure you're using valid week numbers (1-18 for regular season)
+
+### Player Data
+- The player database is ~5MB and updated periodically
+- Player IDs are used throughout the API (e.g., "4866", "2391")
+- Use the `search_player_info` tool to look up player details by ID
+
+## Security Considerations
+
+- No authentication required (Sleeper API is read-only)
+- All data is publicly accessible fantasy football information
+- Running as non-root user in container
+- No sensitive data stored or logged
+
+## API Documentation
+
+Full Sleeper API documentation: https://docs.sleeper.com
 
 ## License
 
-MIT License (see `LICENSE`).
+MIT License
